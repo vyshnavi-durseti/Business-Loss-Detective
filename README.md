@@ -1,53 +1,39 @@
 # Business Loss Detective 🔍
 
-An evidence-based business analytics project that analyzes order data to identify potential business problems and help prioritize further investigation.
+A business analytics project that analyzes order data to find products with unusual cancellation patterns and estimate the sales value tied to them, so a business knows what to investigate first.
 
-## 🎯 Problem Statement
+## Problem Statement
+A business can have cancelled orders and low-profit products without knowing which one to look at first. This project uses transaction data to highlight unusual cancellation patterns and back each finding with evidence.
 
-Businesses may experience cancelled orders, low product profitability, and other operational issues without knowing which areas need attention first.
+## Features
+- Total orders, revenue, profit, cancellation rate and return rate
+- Product-level cancellation, return and processing-time analysis
+- Flags a product when it has enough orders and its cancellation rate is clearly above the overall rate
+- Estimates the sales value tied to cancelled orders and ranks flagged products by it
+- Interactive Streamlit dashboard with adjustable settings
+- Explanations that keep **data-backed facts** separate from **unverified possible causes**
+- Synthetic data generator (reproducible, with a planted problem to test detection)
 
-Business Loss Detective analyzes transaction data to highlight unusual cancellation patterns and provide data-backed insights.
+## Technologies
+Python, Pandas, Streamlit
 
-## ✨ Features
+## Project Files
+- `generate_data.py` creates sample order data (`business_data.csv`)
+- `analysis.py` holds all calculations and the explanation logic
+- `app.py` is the Streamlit dashboard
+- `business_data.csv` is the sample dataset (1,000 orders)
 
-- Calculates total orders, revenue, profit, and cancellation rates.
-- Analyzes order and cancellation patterns for individual products.
-- Flags products whose cancellation rates exceed the overall business cancellation rate.
-- Estimates the order value associated with cancelled orders.
-- Generates sample transaction data for testing.
+## How to Run
+```
+python -m pip install pandas streamlit
+python generate_data.py
+python -m streamlit run app.py
+```
 
-## 🛠️ Technologies Used
+## Notes and Limitations
+- The data is synthetic. One product (Webcam) was deliberately given a higher cancellation rate to test that the detector finds it.
+- Explanations are rule-based. They list possible causes but do not prove them.
+- Planned: returns-based analysis, AI-generated explanations, real data import.
 
-- Python
-- Pandas
-- CSV data processing
-
-## 📂 Project Files
-
-- `app.py` — analyzes transaction data and calculates business metrics.
-- `generate_data.py` — generates sample order data.
-- `business_data.csv` — sample dataset containing 1,000 orders.
-
-## 🚀 How to Run
-
-1. Install Python.
-2. Install Pandas:
-
-   `python -m pip install pandas`
-
-3. Generate the sample dataset:
-
-   `python generate_data.py`
-
-4. Run the analysis:
-
-   `python app.py`
-
-## 🔍 Current Scope
-
-This is an ongoing project. The current version focuses on transaction analysis and product-level cancellation detection. Dashboard features and AI-assisted explanations are planned improvements.
-
-## 👩‍💻 Author
-
-Vyshnavi Durseti  
-B.Tech, NIT Warangal
+## Author
+Vyshnavi Durseti, B.Tech, NIT Warangal

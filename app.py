@@ -1,74 +1,62 @@
-import pandas as pd
+"""
+app.py
+The dashboard (the part the user sees in the browser).
 
-df = pd.read_csv("business_data.csv")
+Run it with:   python -m streamlit run app.py
+Streamlit turns this Python file into a web page.
+"""
 
-print("Total orders:", len(df))
-print(df.head())
-total_orders = len(df)
+import streamlit as st
 
-cancelled_orders = (df["Status"] == "Cancelled").sum()
+from analysis import explain_product, load_data, overall_summary, product_analysis
 
-cancellation_rate = (cancelled_orders / total_orders) * 100
+st.set_page_config(page_title="Business Loss Detective", page_icon="🔍", layout="wide")
 
-print("Total orders:", total_orders)
-print("Cancelled orders:", cancelled_orders)
-print("Cancellation rate:", cancellation_rate, "%")
-completed = df[df["Status"] == "Completed"]
-
-revenue = completed["Price"].sum()
-profit = (completed["Price"] - completed["Cost"]).sum()
-
-print("Revenue:", revenue)
-print("Profit:", profit)
-orders_by_product = df.groupby("Product").size()
-
-print("Orders by product:")
-print(orders_by_product)
-cancelled_by_product = (
-    df[df["Status"] == "Cancelled"]
-    .groupby("Product")
-    .size()
+st.title("🔍 Business Loss Detective")
+st.write(
+    "Finds products with unusual cancellation rates and shows how much "
+    "sales value is tied to those cancellations, so you know what to investigate first."
 )
 
-print("Cancelled orders by product:")
-print(cancelled_by_product)
-cancellation_rate_by_product = (
-    cancelled_by_product / orders_by_product * 100
-)
+# ---- Load the data -------------------------------------------------------
+df = load_data("business_data.csv")
 
-print("Cancellation rate by product:")
-print(cancellation_rate_by_product)
-product_analysis = pd.DataFrame({
-    "Total Orders": orders_by_product,
-    "Cancelled Orders": cancelled_by_product
-}).fillna(0)
+# ---- Sidebar: settings the user can change ------------------------------
+st.sidebar.header("Settings")
+min_orders = st.sidebar.slider("Minimum orders to judge a product", 1, 100, 10)
+margin = st.sidebar.slider("Flag if cancellation rate is this many points above average", 0, 20, 5)
 
-product_analysis["Cancellation Rate"] = (
-    product_analysis["Cancelled Orders"]
-    / product_analysis["Total Orders"]
-    * 100
-)
+# ---- Top numbers (KPIs) --------------------------------------------------
+summary = overall_summary(df)
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("Total orders", summary["total_orders"])
+c2.metric("Cancellation rate", f"{summary['cancellation_rate']:.1f}%")
+c3.metric("Return rate", f"{summary['return_rate']:.1f}%")
+c4.metric("Revenue", f"Rs {summary['revenue']:,.0f}")
+c5.metric("Profit", f"Rs {summary['profit']:,.0f}")
 
-minimum_orders = 10
+# ---- Product table -------------------------------------------------------
+table = product_analysis(df, min_orders=min_orders, margin=margin)
 
-product_analysis["Needs Investigation"] = (
-    (product_analysis["Total Orders"] >= minimum_orders)
-    & (product_analysis["Cancellation Rate"] > cancellation_rate)
-)
+st.subheader("Cancellation rate by product")
+st.bar_chart(table["Cancellation Rate"])
 
-print("Product Analysis:")
-print(product_analysis)
-cancelled_order_value = (
-    df[df["Status"] == "Cancelled"]
-    .groupby("Product")["Price"]
-    .sum()
-)
+st.subheader("Product analysis")
+st.dataframe(table.round(1), use_container_width=True)
 
-product_analysis["Cancelled Order Value"] = (
-    cancelled_order_value
-)
+# ---- Investigation list --------------------------------------------------
+st.subheader("Products that need investigation")
+flagged = table[table["Needs Investigation"]].sort_values("Priority Rank")
 
-product_analysis = product_analysis.fillna(0)
-
-print("Product Analysis with Financial Impact:")
-print(product_analysis)
+if flagged.empty:
+    st.success("No product is unusually high right now.")
+else:
+    for product, row in flagged.iterrows():
+        info = explain_product(product, row, summary["cancellation_rate"])
+        with st.expander(f"#{int(row['Priority Rank'])}  {product}", expanded=True):
+            st.markdown("**What the data shows (facts):**")
+            for line in info["evidence"]:
+                st.write("- " + line)
+            st.markdown("**Possible reasons (NOT proven, someone must check):**")
+            for line in info["unverified"]:
+                st.write("- " + line)
